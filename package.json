@@ -2,7 +2,7 @@
   "name": "website",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -16,5 +16,13 @@
   "bugs": {
     "url": "https://github.com/Ng2k/website/issues"
   },
-  "homepage": "https://github.com/Ng2k/website#readme"
+  "homepage": "https://github.com/Ng2k/website#readme",
+  "dependencies": {
+    "express": "^4.16.4",
+    "mysql": "^2.16.0",
+    "simple-argv": "^1.1.1"
+  },
+  "devDependencies": {
+    "eslint": "^5.9.0"
+  }
 }
