@@ -11,6 +11,7 @@ const config = require("./config")
 const TABLES = ["contents", "tags", "attachments", "categories"]
 const mysql = require("mysql")
 const bodyparser = require("body-parser")
+const { readFileSync } = require("fs")
 
 app.use(bodyparser.json())
 
@@ -19,8 +20,8 @@ const pool = mysql.createPool({
   connectionLimit : 10,
   ...dbConfig
 })
-const jwt = require("jwt-simple")
-const secret =  require(`./jwt-config-${env}`)
+const jwt = require("jsonwebtoken")
+const secret = readFileSync("./rsa/id_rsa", "utf8")
 
 app.use((req, res, next) => {
   res.error = (err, status = 500) => {
@@ -40,12 +41,13 @@ app.post("/login", ({ body }, res) => {
   const { email, password } = body
 
   if (email === "admin@gmail.com" && password === "admin") {
-    const token = jwt.encode({ 
-        admin: true, 
+    const token = jwt.sign({ 
         email
       }, 
       secret,
-      "HS512"
+      {
+        expiresIn: '1h' 
+      }
     )
 
     res.json({
@@ -58,7 +60,17 @@ app.post("/login", ({ body }, res) => {
   }
 })
 
-const auth = 
+const auth = (req, res, next) => {
+  const token = req.get("authorization")
+  jwt.verify(token, secret, (err, decoded) => {
+    if (err) {
+      res.status(403).json({ message: err.message })
+    } else {
+      req.token = decoded
+      next()
+    }
+  })
+}
 
 app.get("/admin", auth, ({ token: { email } }, res) => {
   res.send(`<h1>benvenuto ${email}</h1>`)
