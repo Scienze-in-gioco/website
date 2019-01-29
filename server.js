@@ -5,14 +5,22 @@ const {
   port = p || 8080,
   env = process.env.NODE_ENV || "local" 
 } = require("simple-argv")
+
+const config = require("./config")
+
 const TABLES = ["contents", "tags", "attachments", "categories"]
 const mysql = require("mysql")
+const bodyparser = require("body-parser")
 
-const config = require(`./db-config-${env}`)
+app.use(bodyparser.json())
+
+const dbConfig = require(`./db-config-${env}`)
 const pool = mysql.createPool({
   connectionLimit : 10,
-  ...config
+  ...dbConfig
 })
+const jwt = require("jwt-simple")
+const secret =  require(`./jwt-config-${env}`)
 
 app.use((req, res, next) => {
   res.error = (err, status = 500) => {
@@ -28,7 +36,46 @@ app.get("/", (req, res) => {
   res.send("questa sarà la nostra home page")
 })
 
+app.post("/login", ({ body }, res) => {
+  const { email, password } = body
+
+  if (email === "admin@gmail.com" && password === "admin") {
+    const token = jwt.encode({ 
+        admin: true, 
+        email
+      }, 
+      secret,
+      "HS512"
+    )
+
+    res.json({
+      token
+    })
+  } else {
+    res.status(401).json({
+      message: "wrong email or password"
+    })
+  }
+})
+
+const auth = 
+
+app.get("/admin", auth, ({ token: { email } }, res) => {
+  res.send(`<h1>benvenuto ${email}</h1>`)
+})
+
 TABLES.forEach(table => {
+  app.delete(`/api/${table}/:id`, ({ params: { id } }, res) => {
+    pool.query(`DELETE FROM ${table} WHERE id=${pool.escape(id)}`, (err, results) => {
+      if (err) {
+        res.error(err)
+      } else {
+        res.json({
+          results
+        })
+      }
+    })
+  })
 
   app.get(`/api/${table}`, (req, res) => {
     pool.query(`SELECT * FROM ${table}`, (err, results) => {
@@ -54,7 +101,7 @@ SELECT
   c.draft,
   c.featured,
   c.pubblicationDate,
-  t.name AS tagName,
+  t.name AS tags:tagName,
   cat.name AS categoryName
 
 FROM Contents AS c

@@ -18,7 +18,9 @@
   },
   "homepage": "https://github.com/Ng2k/website#readme",
   "dependencies": {
+    "body-parser": "^1.18.3",
     "express": "^4.16.4",
+    "jwt-simple": "^0.5.5",
     "mysql": "^2.16.0",
     "simple-argv": "^1.1.1"
   },
