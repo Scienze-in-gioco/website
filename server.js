@@ -12,6 +12,8 @@ const TABLES = ["contents", "tags", "attachments", "categories"]
 const mysql = require("mysql")
 const bodyparser = require("body-parser")
 const { readFileSync } = require("fs")
+const Treeize = require("treeize")
+const treeize = new Treeize()
 
 app.use(bodyparser.json())
 
@@ -44,8 +46,7 @@ app.post("/login", ({ body }, res) => {
     const token = jwt.sign({ 
         email
       }, 
-      secret,
-      {
+      secret, {
         expiresIn: '1h' 
       }
     )
@@ -106,32 +107,38 @@ TABLES.forEach(table => {
 app.get("/api/c", (req, res) => {
   pool.query(`
 SELECT 
-  c.permalink, 
-  c.title,
-  c.body,
-  c.author,
-  c.draft,
-  c.featured,
-  c.pubblicationDate,
-  t.name AS tags:tagName,
-  cat.name AS categoryName
+co.id,
+co.permalink,
+co.title,
+co.body,
+co.author,
+co.draft,
+co.featured,
+co.pubblicationDate,
 
-FROM Contents AS c
+ca.name AS "categories:name",
+ca.permalink AS "categories:permalink",
 
-INNER JOIN ContentsAttachmentsTh ON Contents.id = ContentsAttachmentsTh.contentId
-INNER JOIN Attachments AS a ON ContentsAttachmentsTh.attachmentId = Attachments.id
+t.name AS "tags:name",
+t.permalink AS "tags:permalink",
 
-INNER JOIN ContentsCategoriesTh ON Contents.id = ContentsCategoriesTh.contentId
-INNER JOIN Categories AS cat ON ContentsCategoriesTh.categoryId = Categories.id
+a.href AS "attachments:href",
+a.contentType AS "attachments:type",
+a.description AS "attachments:description"
 
-INNER JOIN ContentsTagsTh ON Contents.id = ContentsTagsTh.contentId
-INNER JOIN Tags AS t ON ContentsTagsTh.tagId = Tags.id
+FROM Contents AS co
+LEFT JOIN ContentsCategoriesTh AS cct ON cct.contentId = co.id
+LEFT JOIN Categories AS ca ON cct.categoryId = ca.id
+LEFT JOIN ContentsTagsTh AS ctt ON ctt.contentId = co.id
+LEFT JOIN Tags AS t ON ctt.tagId = t.id
+LEFT JOIN ContentsAttachmentsTh AS cat ON cat.contentId = co.id
+LEFT JOIN Attachments AS a ON cat.attachmentId = ca.id
     `, (err, results) => {
     if (err) {
         res.error(err)
       } else {
         res.json({
-          results
+          results: treeize.grow(results).getData()
         })
       }
   })
