@@ -6,14 +6,11 @@ const {
   env = process.env.NODE_ENV || "local" 
 } = require("simple-argv")
 
-const config = require("./config")
-
 const TABLES = ["contents", "tags", "attachments", "categories"]
 const mysql = require("mysql")
 const bodyparser = require("body-parser")
 const { readFileSync } = require("fs")
 const Treeize = require("treeize")
-const treeize = new Treeize()
 
 app.use(bodyparser.json())
 
@@ -28,8 +25,28 @@ const secret = readFileSync("./rsa/id_rsa", "utf8")
 app.use((req, res, next) => {
   res.error = (err, status = 500) => {
     res.status(status).json({
-      error: env == "production" ? err.message : err.stack
+      error: env === "production" ? err.message : err.stack
     })
+  }
+
+  next()
+})
+
+app.use((req, res, next) => {
+  const { query: { filter } } = req
+
+  if (typeof filter !== "undefined") {
+    try {
+      req.filter = JSON.parse(filter)
+    } catch(_) {
+      return res.error(new Error("filter must be a valid json"), 400)
+    }
+
+    if (typeof req.filter !== "object") {
+      return res.error(new Error("filter must be an object"), 400)
+    }
+  } else {
+    req.filter = {}
   }
 
   next()
@@ -44,11 +61,11 @@ app.post("/login", ({ body }, res) => {
 
   if (email === "admin@gmail.com" && password === "admin") {
     const token = jwt.sign({ 
-        email
-      }, 
-      secret, {
-        expiresIn: '1h' 
-      }
+      email
+    }, 
+    secret, {
+      expiresIn: "1h" 
+    }
     )
 
     res.json({
@@ -104,9 +121,10 @@ TABLES.forEach(table => {
 
 })
 
-app.get("/api/c", (req, res) => {
+app.get("/api/c", ({ filter: { limit = 10 } }, res) => {
+  const treeize = new Treeize()
   pool.query(`
-SELECT 
+SELECT
 co.id,
 co.permalink,
 co.title,
@@ -126,7 +144,7 @@ a.href AS "attachments:href",
 a.contentType AS "attachments:type",
 a.description AS "attachments:description"
 
-FROM Contents AS co
+FROM (SELECT * FROM Contents LIMIT ${limit} OFFSET 0) AS co
 LEFT JOIN ContentsCategoriesTh AS cct ON cct.contentId = co.id
 LEFT JOIN Categories AS ca ON cct.categoryId = ca.id
 LEFT JOIN ContentsTagsTh AS ctt ON ctt.contentId = co.id
@@ -135,12 +153,12 @@ LEFT JOIN ContentsAttachmentsTh AS cat ON cat.contentId = co.id
 LEFT JOIN Attachments AS a ON cat.attachmentId = ca.id
     `, (err, results) => {
     if (err) {
-        res.error(err)
-      } else {
-        res.json({
-          results: treeize.grow(results).getData()
-        })
-      }
+      res.error(err)
+    } else {
+      res.json({
+        results: treeize.grow(results).getData()
+      })
+    }
   })
 })
 

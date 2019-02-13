@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "NODE_ENV=local node ."
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,7 @@
     "treeize": "^2.1.2"
   },
   "devDependencies": {
-    "eslint": "^5.9.0"
+    "@soluzioni-futura/eslint-config-soluzioni-futura": "^1.0.1",
+    "eslint": "^5.13.0"
   }
 }
